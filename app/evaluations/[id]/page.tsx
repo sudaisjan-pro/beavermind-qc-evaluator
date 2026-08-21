@@ -200,9 +200,9 @@ export default function EvaluationResultPage() {
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0, windowWidth: 1024 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
         pagebreak: { mode: ['css', 'legacy'], avoid: ['.dimension-card', '.summary-card', '.hero-card', '.verbatim-card'] }
       };
       await html2pdfModule().set(opt).from(element).save();
