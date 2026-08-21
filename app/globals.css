@@ -13,68 +13,52 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
-/* ─── Client-Ready Print / PDF Stylesheet (Compact Executive Layout) ─── */
-@media print {
-  @page {
-    size: A4;
-    margin: 10mm 10mm 10mm 10mm;
-  }
-
-  html, body {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    font-size: 9pt !important;
-    line-height: 1.3 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  /* Hide interactive header, buttons, and navigation */
-  .no-print,
-  button,
-  a[href="/"] {
-    display: none !important;
-  }
-
-  /* Force background colors and borders */
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Force all dimension accordion contents to be visible */
-  .print-expand {
-    display: block !important;
-    padding-top: 4pt !important;
-    padding-bottom: 4pt !important;
-    margin-top: 4pt !important;
-  }
-
-  /* Compact cards for print */
-  .dimension-card,
-  .hero-card,
-  .summary-card {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 6pt !important;
-    box-shadow: none !important;
-    margin-bottom: 6pt !important;
-    padding: 6pt 10pt !important;
-  }
-
-  /* Compact spacing for headings and quotes */
-  h1 { font-size: 16pt !important; }
-  h2 { font-size: 12pt !important; margin-top: 8pt !important; margin-bottom: 4pt !important; }
-  h3 { font-size: 10pt !important; margin-bottom: 2pt !important; }
-  h4 { font-size: 8pt !important; margin-bottom: 2pt !important; }
-  p, li { font-size: 8.5pt !important; line-height: 1.3 !important; }
-
-  /* Compact verbatim quotes */
-  .print-expand .font-mono {
-    font-size: 7.5pt !important;
-    padding: 3pt 6pt !important;
-    margin-top: 2pt !important;
-    margin-bottom: 2pt !important;
-  }
+/* ─── PDF Export Clean Mode (Applied during html2pdf generation) ─── */
+.pdf-export-mode {
+  background: #faf8f5 !important;
 }
+
+.pdf-export-mode .no-print {
+  display: none !important;
+}
+
+/* Ensure no text is truncated or clipped vertically by html2canvas */
+.pdf-export-mode .truncate {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+}
+
+/* Remove backdrop blur & heavy filters for crisp html2canvas rendering */
+.pdf-export-mode * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* Avoid page breaks inside key blocks */
+.pdf-export-mode .dimension-card,
+.pdf-export-mode .summary-card,
+.pdf-export-mode .hero-card,
+.pdf-export-mode .verbatim-card {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+  margin-bottom: 16px !important;
+}
+
+/* Fix heading baselines and line-heights to avoid cut-off fonts */
+.pdf-export-mode h1,
+.pdf-export-mode h2,
+.pdf-export-mode h3,
+.pdf-export-mode h4 {
+  line-height: 1.4 !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+.pdf-export-mode p,
+.pdf-export-mode span {
+  line-height: 1.5 !important;
+}
+

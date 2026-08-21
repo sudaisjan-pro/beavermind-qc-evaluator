@@ -1,156 +1,147 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams } from 'next/navigation';
-import { GetEvaluationResponse, EvaluationResult, Dimension } from '@/lib/types';
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useParams } from "next/navigation";
+import { GetEvaluationResponse, EvaluationResult, Dimension } from "@/lib/types";
+import { Zap, ArrowLeft, Download, AlertTriangle, AlertCircle, ChevronDown, Activity, Sparkles, AlertOctagon, CheckCircle2, Info } from "lucide-react";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
-// ─── Score Color Helper ───
-function getScoreColor(score: number | null, max: number): string {
-  if (score === null) return 'text-slate-400';
-  const pct = (score / max) * 100;
-  if (pct >= 90) return 'text-emerald-600';
-  if (pct >= 70) return 'text-blue-600';
-  if (pct >= 50) return 'text-amber-600';
-  return 'text-red-600';
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
-function getScoreBg(score: number | null, max: number): string {
-  if (score === null) return 'bg-slate-100';
-  const pct = (score / max) * 100;
-  if (pct >= 90) return 'bg-emerald-50 border-emerald-200';
-  if (pct >= 70) return 'bg-blue-50 border-blue-200';
-  if (pct >= 50) return 'bg-amber-50 border-amber-200';
-  return 'bg-red-50 border-red-200';
-}
-
-function getGradeBadge(grade: string): { bg: string; text: string } {
+function getGradeBadge(grade: string) {
   switch (grade) {
-    case 'ELITE': return { bg: 'bg-emerald-100 border-emerald-300', text: 'text-emerald-800' };
-    case 'STRONG': return { bg: 'bg-blue-100 border-blue-300', text: 'text-blue-800' };
-    case 'INCONSISTENT': return { bg: 'bg-amber-100 border-amber-300', text: 'text-amber-800' };
-    case 'AT RISK': return { bg: 'bg-orange-100 border-orange-300', text: 'text-orange-800' };
-    case 'FAIL': return { bg: 'bg-red-100 border-red-300', text: 'text-red-800' };
-    default: return { bg: 'bg-slate-100 border-slate-300', text: 'text-slate-800' };
+    case 'ELITE': return { bg: 'bg-emerald-500/10 border-emerald-500/20', text: 'text-emerald-700', icon: <CheckCircle2 className="w-4 h-4" /> };
+    case 'STRONG': return { bg: 'bg-blue-500/10 border-blue-500/20', text: 'text-blue-700', icon: <Activity className="w-4 h-4" /> };
+    case 'INCONSISTENT': return { bg: 'bg-amber-500/10 border-amber-500/20', text: 'text-amber-700', icon: <AlertTriangle className="w-4 h-4" /> };
+    case 'AT RISK': return { bg: 'bg-orange-500/10 border-orange-500/20', text: 'text-orange-700', icon: <AlertCircle className="w-4 h-4" /> };
+    case 'FAIL': return { bg: 'bg-rose-500/10 border-rose-500/20', text: 'text-rose-700', icon: <AlertOctagon className="w-4 h-4" /> };
+    default: return { bg: 'bg-neutral-500/10 border-neutral-500/20', text: 'text-neutral-700', icon: <Info className="w-4 h-4" /> };
   }
 }
 
-function getBarWidth(score: number | null, max: number): string {
-  if (score === null) return '0%';
-  return `${Math.round((score / max) * 100)}%`;
-}
-
-function getBarColor(score: number | null, max: number): string {
-  if (score === null) return 'bg-slate-300';
+function getScoreColor(score: number | null, max: number) {
+  if (score === null) return "text-neutral-400";
   const pct = (score / max) * 100;
-  if (pct >= 90) return 'bg-emerald-500';
-  if (pct >= 70) return 'bg-blue-500';
-  if (pct >= 50) return 'bg-amber-500';
-  return 'bg-red-500';
+  if (pct >= 90) return "text-emerald-600";
+  if (pct >= 70) return "text-blue-600";
+  if (pct >= 50) return "text-amber-600";
+  return "text-rose-600";
 }
 
-// ─── Dimension Card Component ───
+function getBarColor(score: number | null, max: number) {
+  if (score === null) return "bg-neutral-200";
+  const pct = (score / max) * 100;
+  if (pct >= 90) return "bg-emerald-500";
+  if (pct >= 70) return "bg-blue-500";
+  if (pct >= 50) return "bg-amber-500";
+  return "bg-rose-500";
+}
+
 function DimensionCard({ dim, forceOpen }: { dim: Dimension; forceOpen?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const showDetails = forceOpen || isOpen;
+  const scorePct = dim.score !== null ? (dim.score / dim.max_score) * 100 : 0;
 
   return (
-    <div className="dimension-card bg-white rounded-2xl border border-slate-200/80 overflow-hidden transition-all duration-200 hover:shadow-md hover:border-slate-300/80">
-      {/* Header — clickable to expand */}
+    <div className="dimension-card bg-white/80 backdrop-blur-xl border border-black/[0.04] rounded-3xl overflow-hidden transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-4 ring-1 ring-white">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-5 sm:p-6 flex items-center justify-between gap-4 text-left no-print"
+        className="w-full p-6 flex items-center justify-between text-left group"
       >
-        <div className="flex items-center gap-4 min-w-0">
-          <div className={`shrink-0 w-14 h-14 rounded-xl border flex flex-col items-center justify-center ${getScoreBg(dim.score, dim.max_score)}`}>
-            <span className={`text-lg font-bold leading-none ${getScoreColor(dim.score, dim.max_score)}`}>
+        <div className="flex items-center gap-5 min-w-0">
+          <div className="relative w-16 h-16 shrink-0 flex flex-col items-center justify-center bg-[#FAF8F5] rounded-2xl shadow-inner border border-black/[0.02]">
+            <span className={cn("text-xl font-black tracking-tighter leading-none", getScoreColor(dim.score, dim.max_score))}>
               {dim.score !== null ? dim.score : '—'}
             </span>
-            <span className="text-[10px] text-slate-400 font-medium">/{dim.max_score}</span>
+            <span className="text-[10px] font-bold text-neutral-400 uppercase mt-0.5">/{dim.max_score}</span>
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{dim.id}</span>
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest">{dim.id}</span>
               {dim.pillar && (
-                <span className="text-[10px] font-semibold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-[#111113] bg-neutral-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                   {dim.pillar}
                 </span>
               )}
               {dim.disabled && (
-                <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                   DISABLED
                 </span>
               )}
             </div>
-            <h3 className="text-base font-bold text-slate-800 mt-0.5 truncate">{dim.name}</h3>
+            <h3 className="text-lg font-bold text-[#111113] group-hover:text-amber-600 transition-colors tracking-tight leading-snug py-0.5">{dim.name}</h3>
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${getScoreBg(dim.score, dim.max_score)} ${getScoreColor(dim.score, dim.max_score)}`}>
+        <div className="flex items-center gap-4 shrink-0 pl-4">
+          <span className={cn("text-[11px] font-black px-3 py-1.5 rounded-xl border tracking-wide uppercase shadow-sm", getGradeBadge(dim.band).bg, getGradeBadge(dim.band).text)}>
             {dim.band}
           </span>
-          <svg
-            className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
+          <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300", isOpen ? "bg-[#111113] text-white" : "bg-[#FAF8F5] text-neutral-400 group-hover:bg-neutral-200")}>
+            <ChevronDown className={cn("w-5 h-5 transition-transform duration-300", isOpen && "rotate-180")} />
+          </div>
         </div>
       </button>
 
       {/* Score Bar */}
-      <div className="px-5 sm:px-6 pb-1 no-print">
-        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${getBarColor(dim.score, dim.max_score)}`}
-            style={{ width: getBarWidth(dim.score, dim.max_score) }}
-          />
+      <div className="px-6 pb-2">
+        <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+          <div className={cn("h-full rounded-full transition-all duration-1000 ease-out", getBarColor(dim.score, dim.max_score))} style={{ width: `${scorePct}%` }} />
         </div>
       </div>
 
-      {/* Expandable Details */}
-      <div className={`px-5 sm:px-6 pb-6 pt-4 space-y-4 border-t border-slate-100 mt-2 ${showDetails ? 'block' : 'hidden print:block'} print-expand`}>
-        {dim.disabled && dim.disabled_reason && (
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-600 italic">
-            {dim.disabled_reason}
-          </div>
-        )}
-
-        {/* Reasoning */}
-        <div>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Reasoning</h4>
-          <p className="text-sm text-slate-700 leading-relaxed">{dim.reasoning}</p>
-        </div>
-
-        {/* Verbatim Evidence */}
-        {dim.verbatim_quotes.length > 0 && (
-          <div>
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-              Verbatim Evidence ({dim.verbatim_quotes.length})
-            </h4>
-            <div className="space-y-2">
-              {dim.verbatim_quotes.map((quote, idx) => (
-                <div
-                  key={idx}
-                  className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs sm:text-sm font-mono text-slate-700 border-l-4 border-l-blue-500 leading-relaxed"
-                >
-                  &ldquo;{quote}&rdquo;
-                </div>
-              ))}
+      {/* Expanded State */}
+      <div className={cn("px-6 overflow-hidden transition-all duration-300 ease-in-out", showDetails ? "max-h-[2000px] opacity-100 pb-6 pt-4" : "max-h-0 opacity-0")}>
+        <div className="space-y-6 pt-4 border-t border-black/[0.04]">
+          {dim.disabled && dim.disabled_reason && (
+            <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-sm font-medium text-neutral-500 italic">
+              {dim.disabled_reason}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Quick Fix */}
-        <div className="bg-blue-50/60 border border-blue-200/80 rounded-xl p-4">
-          <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">Quick Fix</h4>
-          <p className="text-sm text-blue-900 font-medium leading-relaxed">{dim.quick_fix}</p>
+          <div>
+            <h4 className="text-[11px] font-extrabold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              Reasoning
+            </h4>
+            <p className="text-[15px] text-neutral-700 leading-relaxed font-medium">{dim.reasoning}</p>
+          </div>
+
+          {dim.verbatim_quotes.length > 0 && (
+            <div>
+              <h4 className="text-[11px] font-extrabold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-blue-500" />
+                Verbatim Evidence ({dim.verbatim_quotes.length})
+              </h4>
+              <div className="space-y-3">
+                {dim.verbatim_quotes.map((quote, idx) => (
+                  <div key={idx} className="verbatim-card bg-[#111113] rounded-2xl p-5 text-sm font-mono text-neutral-300 border-l-[6px] border-l-amber-400 leading-relaxed shadow-lg">
+                    "{quote}"
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {dim.quick_fix && (
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100/50 rounded-2xl p-5 flex gap-4">
+              <div className="w-8 h-8 rounded-full bg-amber-200/50 flex items-center justify-center shrink-0">
+                <Zap className="w-4 h-4 text-amber-600" />
+              </div>
+              <div>
+                <h4 className="text-[11px] font-extrabold text-amber-800 uppercase tracking-widest mb-1.5">Quick Fix</h4>
+                <p className="text-[14px] text-amber-950 font-semibold leading-relaxed">{dim.quick_fix}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Main Page Component ───
 export default function EvaluationResultPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -159,7 +150,6 @@ export default function EvaluationResultPage() {
   const [error, setError] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
   const [expandAll, setExpandAll] = useState(false);
-  const [isRetrying, setIsRetrying] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const statusRef = useRef<string>('pending');
 
@@ -167,10 +157,7 @@ export default function EvaluationResultPage() {
     try {
       const res = await fetch(`/api/evaluations/${id}?t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) {
-        if (res.status === 404) {
-          setError('Evaluation not found. The link may be invalid.');
-          return;
-        }
+        if (res.status === 404) throw new Error('Evaluation not found. The link may be invalid.');
         throw new Error('Failed to fetch evaluation');
       }
       const data: GetEvaluationResponse = await res.json();
@@ -182,10 +169,8 @@ export default function EvaluationResultPage() {
     }
   }, [id]);
 
-  // Initial fetch + polling
   useEffect(() => {
     fetchEvaluation();
-
     const interval = setInterval(() => {
       if (statusRef.current === 'completed' || statusRef.current === 'failed') {
         clearInterval(interval);
@@ -193,296 +178,254 @@ export default function EvaluationResultPage() {
       }
       fetchEvaluation();
     }, 3000);
-
     return () => clearInterval(interval);
   }, [fetchEvaluation]);
 
-  // 1-Click Retry Action
-  const handleRetry = async () => {
-    setIsRetrying(true);
-    try {
-      const res = await fetch(`/api/evaluations/${id}/retry`, { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to retry');
-      statusRef.current = 'processing';
-      setEvaluation(prev => prev ? { ...prev, status: 'processing', error_message: null } : null);
-      const interval = setInterval(() => {
-        if (statusRef.current === 'completed' || statusRef.current === 'failed') {
-          clearInterval(interval);
-          return;
-        }
-        fetchEvaluation();
-      }, 3000);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setIsRetrying(false);
-    }
-  };
-
-  // ─── Direct Automatic PDF Downloader ───
   const handleDownloadPdf = async () => {
     if (!evaluation || !evaluation.score_data) return;
     setIsDownloadingPdf(true);
-    setExpandAll(true); // expand all sections for the PDF
+    setExpandAll(true);
+    document.body.classList.add('pdf-export-mode');
 
     try {
-      // Dynamically import html2pdf for client-side rendering
+      await new Promise((resolve) => setTimeout(resolve, 400));
       const html2pdfModule = (await import('html2pdf.js')).default;
       const element = document.getElementById('report-export-container');
       if (!element) return;
-
       const typeLabel = evaluation.call_type === 'kickoff' ? 'Kickoff' : 'Coaching';
       const score = evaluation.score_data.total_score;
       const maxScore = evaluation.score_data.max_possible;
       const grade = evaluation.score_data.grade_stage;
       const filename = `${typeLabel}_Call_Evaluation_${grade}_${score}of${maxScore}.pdf`;
-
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: filename,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0, windowWidth: 1024 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['.dimension-card', '.summary-card', '.hero-card', '.verbatim-card'] }
       };
-
       await html2pdfModule().set(opt).from(element).save();
     } catch (err) {
-      console.error('Direct PDF error, falling back to window.print():', err);
       window.print();
     } finally {
+      document.body.classList.remove('pdf-export-mode');
       setIsDownloadingPdf(false);
     }
   };
 
-  // ─── Error State ───
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-red-50 flex flex-col items-center justify-center p-8">
-        <div className="bg-white rounded-2xl border border-red-200 p-8 max-w-md text-center shadow-xl">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
+      <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-8 font-sans selection:bg-amber-200 relative overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-rose-200/40 blur-[120px] pointer-events-none" />
+        <div className="bg-white/80 backdrop-blur-2xl rounded-[2.5rem] border border-black/[0.06] p-12 max-w-md text-center shadow-[0_24px_50px_-15px_rgba(0,0,0,0.06)] relative z-10">
+          <div className="w-20 h-20 mx-auto mb-6 bg-rose-100 rounded-3xl flex items-center justify-center shadow-inner">
+            <AlertOctagon className="w-10 h-10 text-rose-500" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Something went wrong</h2>
-          <p className="text-sm text-slate-600 mb-6">{error}</p>
-          <a href="/" className="inline-block px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors">
-            ← Back to Home
+          <h2 className="text-2xl font-black text-[#111113] mb-3 tracking-tight">Something went wrong</h2>
+          <p className="text-[#71717A] mb-8 font-medium">{error}</p>
+          <a href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-[#111113] hover:bg-[#27272A] text-white rounded-2xl text-sm font-bold transition-all hover:scale-[1.02] shadow-[0_12px_24px_-8px_rgba(0,0,0,0.3)]">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
           </a>
         </div>
       </div>
     );
   }
 
-  // ─── Loading / Processing State ───
   if (!evaluation || evaluation.status === 'pending' || evaluation.status === 'processing') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-blue-50 flex flex-col items-center justify-center p-8">
-        <div className="text-center max-w-md">
-          <div className="relative mx-auto w-20 h-20 mb-8">
-            <div className="absolute inset-0 rounded-full border-4 border-blue-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
-            <div className="absolute inset-3 rounded-full border-4 border-indigo-300 border-b-transparent animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+      <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-8 font-sans relative overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-amber-200/40 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-100/50 blur-[140px] pointer-events-none" />
+        
+        <div className="text-center max-w-md relative z-10">
+          <div className="relative mx-auto w-24 h-24 mb-10">
+            <div className="absolute inset-0 rounded-[2rem] border-4 border-black/[0.04]"></div>
+            <div className="absolute inset-0 rounded-[2rem] border-4 border-amber-400 border-t-transparent animate-spin"></div>
+            <div className="absolute inset-4 rounded-3xl border-4 border-[#111113] border-b-transparent animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">Analyzing Transcript...</h2>
-          <p className="text-sm text-slate-500 leading-relaxed mb-6">
-            The AI is scoring the call against all 12 rubric dimensions, extracting verbatim evidence, checking automatic caps, and building the report.
+          <h2 className="text-3xl font-black text-[#111113] mb-4 tracking-tight">Analyzing Transcript...</h2>
+          <p className="text-[#6E6D7A] font-medium leading-relaxed mb-8">
+            Grading against executive rubrics. Verbatim citations, churn risk detection, and automatic caps in progress.
           </p>
-          <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            Polling for results... ({pollCount})
+          <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/80 border border-black/[0.04] shadow-sm backdrop-blur-md">
+            <div className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse"></div>
+            <span className="text-xs font-bold text-neutral-700 tracking-wide uppercase">Polling for results... ({pollCount})</span>
           </div>
-          <p className="text-xs text-slate-400 mt-4">
-            You can safely close this tab and return later using this URL.
-          </p>
         </div>
       </div>
     );
   }
 
-  // ─── Failed State (With 1-Click Retry) ───
   if (evaluation.status === 'failed') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-red-50 flex flex-col items-center justify-center p-8">
-        <div className="bg-white rounded-2xl border border-red-200 p-8 max-w-lg text-center shadow-xl">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+      <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-8 font-sans relative overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-rose-200/40 blur-[120px] pointer-events-none" />
+        <div className="bg-white/80 backdrop-blur-2xl rounded-[2.5rem] border border-black/[0.06] p-10 max-w-xl text-center shadow-[0_24px_50px_-15px_rgba(0,0,0,0.06)] relative z-10">
+          <div className="w-20 h-20 mx-auto mb-6 bg-rose-100 rounded-3xl flex items-center justify-center shadow-inner">
+            <AlertOctagon className="w-10 h-10 text-rose-500" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Evaluation Failed</h2>
-          <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-xs font-mono text-red-800 text-left mb-6 overflow-x-auto leading-relaxed">
+          <h2 className="text-2xl font-black text-[#111113] mb-3 tracking-tight">Evaluation Failed</h2>
+          <div className="p-5 bg-neutral-50 border border-neutral-100 rounded-2xl text-xs font-mono text-rose-800 text-left mb-8 overflow-x-auto leading-relaxed font-medium">
             {evaluation.error_message || 'An unknown error occurred during evaluation.'}
           </div>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={handleRetry}
-              disabled={isRetrying}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-blue-500/20"
-            >
-              {isRetrying ? 'Retrying...' : '🔄 Retry Evaluation'}
-            </button>
-            <a href="/" className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
-              ← New Call
-            </a>
-          </div>
+          <a href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-[#111113] hover:bg-[#27272A] text-white rounded-2xl text-sm font-bold transition-all hover:scale-[1.02] shadow-[0_12px_24px_-8px_rgba(0,0,0,0.3)]">
+            <ArrowLeft className="w-4 h-4" />
+            Try New Call
+          </a>
         </div>
       </div>
     );
   }
 
-  // ─── Completed State ───
   const data = evaluation.score_data as EvaluationResult;
   if (!data) return null;
 
-  const gradeBadge = getGradeBadge(data.grade_stage);
+  const badge = getGradeBadge(data.grade_stage);
   const scorePct = Math.round((data.total_score / data.max_possible) * 100);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-blue-50 py-8 px-4 sm:px-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <main className="min-h-screen bg-[#FAF8F5] text-[#1A1A1E] relative overflow-hidden font-sans selection:bg-amber-200 pb-20">
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-amber-200/40 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-orange-100/50 blur-[140px] pointer-events-none" />
 
-        {/* Top Header / Actions */}
-        <div className="flex items-center justify-between no-print">
-          <a href="/" className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors flex items-center gap-1">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            New Evaluation
-          </a>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleDownloadPdf}
-              disabled={isDownloadingPdf}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              {isDownloadingPdf ? 'Generating PDF...' : 'Download PDF'}
-            </button>
-            <span className="text-xs text-slate-400 font-mono">ID: {id.slice(0, 8)}</span>
+      <header className="max-w-5xl mx-auto px-6 py-8 flex items-center justify-between relative z-10 no-print">
+        <a href="/" className="flex items-center gap-2 text-sm font-bold text-[#71717A] hover:text-[#111113] transition-colors bg-white/50 px-4 py-2 rounded-xl backdrop-blur-md border border-black/[0.04]">
+          <ArrowLeft className="w-4 h-4" />
+          New Evaluation
+        </a>
+        <div className="flex items-center gap-4">
+          <span className="text-[10px] font-bold text-neutral-400 font-mono tracking-widest uppercase px-3 py-1 bg-white/50 rounded-lg border border-black/[0.04]">ID: {id.slice(0, 8)}</span>
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isDownloadingPdf}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#111113] hover:bg-[#27272A] text-white rounded-xl text-xs font-bold shadow-[0_8px_16px_-6px_rgba(0,0,0,0.3)] transition-all hover:scale-[1.02] disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            {isDownloadingPdf ? 'Generating PDF...' : 'Export PDF'}
+          </button>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto px-4 relative z-10" id="report-export-container">
+        {/* Score Hero Card */}
+        <div className="hero-card bg-white/90 backdrop-blur-3xl border border-white rounded-[2.5rem] shadow-[0_24px_50px_-15px_rgba(0,0,0,0.06)] ring-1 ring-black/[0.04] p-8 md:p-12 mb-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#F4F1EA] rounded-xl mb-4">
+                <span className="text-base">{evaluation.call_type === 'kickoff' ? '🚀' : '🎯'}</span>
+                <span className="text-[10px] font-extrabold text-neutral-600 uppercase tracking-widest">
+                  {evaluation.call_type === 'kickoff' ? 'Kick-off Call' : 'Coaching Call'}
+                </span>
+              </div>
+              <h1 className="text-3xl md:text-5xl font-black text-[#111113] tracking-tight mb-2 py-1">Executive Report</h1>
+              <p className="text-sm font-medium text-[#71717A] print:block hidden">Halden Method Evaluation System · Run ID: {id}</p>
+            </div>
+            
+            <div className="flex items-center gap-6 bg-[#FAF8F5] p-6 rounded-[2rem] border border-black/[0.04] shadow-inner">
+              <div className="text-right flex flex-col justify-center">
+                <div className="text-5xl font-black text-[#111113] tracking-tight leading-none mb-2">
+                  {data.total_score}<span className="text-2xl text-neutral-400 font-bold ml-0.5">/{data.max_possible}</span>
+                </div>
+                <div className="flex items-center gap-2 justify-end">
+                  <div className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest", badge.bg, badge.text)}>
+                    {badge.icon}
+                    {data.grade_stage}
+                  </div>
+                  {data.max_possible === 85 && (
+                    <span className="text-[10px] font-bold text-neutral-500 bg-white border border-neutral-200 px-2 py-1 rounded-lg">
+                      D4 N/A
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="relative w-24 h-24 shrink-0 no-print drop-shadow-md">
+                <svg className="w-24 h-24 -rotate-90" viewBox="0 0 36 36">
+                  <path className="text-white" stroke="currentColor" strokeWidth="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path className={cn("transition-all duration-1000 ease-out", getScoreColor(data.total_score, data.max_possible))} stroke="currentColor" strokeWidth="3" fill="none" strokeDasharray={`${scorePct}, 100`} strokeLinecap="round" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-sm font-black text-[#111113]">
+                  {scorePct}%
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Export Container for PDF */}
-        <div id="report-export-container" className="space-y-6">
-
-          {/* Score Hero Card */}
-          <div className="hero-card bg-white rounded-2xl border border-slate-200/80 shadow-xl shadow-slate-200/40 p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-              <div className="space-y-1">
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  {evaluation.call_type === 'kickoff' ? '🚀 Kick-off Call' : '🎯 Coaching Call'} Evaluation
-                </div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Call Evaluation Report</h1>
-                <p className="text-xs text-slate-400 print:block hidden">Halden Method Evaluation System · Run ID: {id}</p>
-              </div>
-              <div className="flex items-center gap-5">
-                <div className="text-right">
-                  <div className="text-4xl font-black text-slate-900 tracking-tight">
-                    {data.total_score}<span className="text-lg font-medium text-slate-400">/{data.max_possible}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 justify-end mt-1">
-                    <div className={`inline-block px-3 py-1 rounded-lg border text-xs font-bold uppercase tracking-wider ${gradeBadge.bg} ${gradeBadge.text}`}>
-                      {data.grade_stage}
-                    </div>
-                    {data.max_possible === 85 && (
-                      <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg" title="Dimension 4 (Movement Coaching Quality) was disabled for this call per rubric">
-                        D4 N/A (Strategy Call)
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {/* Circular score indicator */}
-                <div className="relative w-16 h-16 shrink-0 no-print">
-                  <svg className="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
-                    <path className="text-slate-100" stroke="currentColor" strokeWidth="3" fill="none"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path className="text-blue-600" stroke="currentColor" strokeWidth="3" fill="none"
-                      strokeDasharray={`${scorePct}, 100`} strokeLinecap="round"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-700">
-                    {scorePct}%
-                  </span>
-                </div>
-              </div>
+        {/* The One Thing + Red Flags */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="summary-card bg-gradient-to-br from-[#111113] to-[#27272A] rounded-[2rem] p-8 shadow-[0_24px_50px_-15px_rgba(0,0,0,0.2)] text-white relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-6 opacity-10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-12">
+              <Zap className="w-32 h-32 text-amber-400" />
             </div>
+            <h3 className="text-[11px] font-extrabold text-amber-400 uppercase tracking-widest mb-4 relative z-10 flex items-center gap-2">
+              <Zap className="w-4 h-4" /> The One Thing
+            </h3>
+            <p className="text-[15px] font-semibold leading-relaxed relative z-10">{data.the_one_thing}</p>
           </div>
 
-          {/* The One Thing + Red Flags */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="summary-card bg-white rounded-2xl border border-slate-200/80 p-6 border-l-4 border-l-blue-600">
-              <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">💡 The One Thing</h3>
-              <p className="text-sm text-slate-800 font-medium leading-relaxed">{data.the_one_thing}</p>
-            </div>
-
-            {data.red_flags.length > 0 && (
-              <div className="summary-card bg-red-50/50 rounded-2xl border border-red-200/80 p-6 border-l-4 border-l-red-500">
-                <h3 className="text-xs font-bold text-red-600 uppercase tracking-wider mb-3">🚩 Red Flags</h3>
-                <ul className="space-y-2">
-                  {data.red_flags.map((flag, idx) => (
-                    <li key={idx} className="text-sm text-red-800 font-medium leading-relaxed flex gap-2">
-                      <span className="shrink-0 mt-0.5">•</span>
-                      <span>{flag}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          {/* The Brief */}
-          <div className="summary-card bg-white rounded-2xl border border-slate-200/80 p-6">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">📋 The Brief</h3>
-            <p className="text-sm text-slate-700 leading-relaxed">{data.the_brief}</p>
-          </div>
-
-          {/* Auto Caps */}
-          {data.auto_caps_checked.some(c => c.fired) && (
-            <div className="summary-card bg-amber-50/50 rounded-2xl border border-amber-200/80 p-6">
-              <h3 className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-3">⚠️ Automatic Caps Triggered</h3>
-              <div className="space-y-2">
-                {data.auto_caps_checked.filter(c => c.fired).map((cap, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-sm">
-                    <span className="shrink-0 text-amber-600 font-bold">→</span>
-                    <div>
-                      <span className="text-amber-900 font-medium">{cap.condition}</span>
-                      <span className="text-amber-600 ml-2">({cap.cap_applied})</span>
-                    </div>
-                  </div>
+          {data.red_flags.length > 0 && (
+            <div className="summary-card bg-white/80 backdrop-blur-xl rounded-[2rem] border-2 border-rose-100 p-8 shadow-[0_24px_50px_-15px_rgba(225,29,72,0.1)] relative">
+              <h3 className="text-[11px] font-extrabold text-rose-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" /> Red Flags
+              </h3>
+              <ul className="space-y-3">
+                {data.red_flags.map((flag, idx) => (
+                  <li key={idx} className="text-[14px] text-rose-950 font-semibold leading-relaxed flex gap-3 items-start">
+                    <span className="shrink-0 mt-1 w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <span>{flag}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           )}
+        </div>
 
-          {/* 12 Dimensions */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-900">Dimensions Breakdown</h2>
-              <button
-                onClick={() => setExpandAll(!expandAll)}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 no-print"
-              >
-                {expandAll ? 'Collapse All' : 'Expand All'}
-              </button>
-            </div>
+        {/* The Brief */}
+        <div className="summary-card bg-white/80 backdrop-blur-xl border border-black/[0.04] rounded-[2rem] p-8 shadow-sm mb-8 ring-1 ring-white">
+          <h3 className="text-[11px] font-extrabold text-neutral-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <Info className="w-4 h-4 text-blue-500" /> The Brief
+          </h3>
+          <p className="text-[15px] text-[#111113] font-medium leading-relaxed italic border-l-[3px] border-l-blue-200 pl-6">{data.the_brief}</p>
+        </div>
+
+        {/* Auto Caps */}
+        {data.auto_caps_checked.some(c => c.fired) && (
+          <div className="summary-card bg-orange-50/80 backdrop-blur-xl border border-orange-100 rounded-[2rem] p-8 shadow-sm mb-8">
+            <h3 className="text-[11px] font-extrabold text-orange-700 uppercase tracking-widest mb-5 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" /> Automatic Caps Triggered
+            </h3>
             <div className="space-y-3">
-              {data.dimensions.map((dim) => (
-                <DimensionCard key={dim.id} dim={dim} forceOpen={expandAll} />
+              {data.auto_caps_checked.filter(c => c.fired).map((cap, idx) => (
+                <div key={idx} className="flex items-start gap-3 bg-white/60 p-4 rounded-xl border border-orange-100/50">
+                  <AlertOctagon className="w-5 h-5 text-orange-500 shrink-0" />
+                  <div>
+                    <span className="text-[14px] text-orange-950 font-bold block mb-1">{cap.condition}</span>
+                    <span className="text-[12px] font-extrabold text-orange-700 uppercase tracking-wider px-2.5 py-1 bg-orange-100 rounded-md inline-block">{cap.cap_applied}</span>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
+        )}
 
-        </div>
-
-        {/* Footer */}
-        <div className="text-center pt-4 pb-8 no-print">
-          <p className="text-xs text-slate-400">
-            Evaluated at {new Date(evaluation.created_at).toLocaleString()} · Run ID: {id}
-          </p>
+        {/* 12 Dimensions */}
+        <div className="mt-12">
+          <div className="flex items-center justify-between mb-6 px-2">
+            <h2 className="text-2xl font-black text-[#111113] tracking-tight">Dimensions Breakdown</h2>
+            <button
+              onClick={() => setExpandAll(!expandAll)}
+              className="text-[11px] font-extrabold text-[#111113] uppercase tracking-widest hover:text-amber-600 transition-colors bg-white px-4 py-2 rounded-xl shadow-sm border border-black/[0.04] no-print"
+            >
+              {expandAll ? 'Collapse All' : 'Expand All'}
+            </button>
+          </div>
+          <div className="space-y-1">
+            {data.dimensions.map((dim) => (
+              <DimensionCard key={dim.id} dim={dim} forceOpen={expandAll} />
+            ))}
+          </div>
         </div>
       </div>
     </main>

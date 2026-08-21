@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Zap, ArrowRight } from "lucide-react";
 
 const SAMPLE_TRANSCRIPTS = [
   { label: 'Kickoff 1', file: '/transcripts/kickoff-01.txt', type: 'kickoff' as const },
@@ -11,23 +12,17 @@ const SAMPLE_TRANSCRIPTS = [
 ];
 
 export default function HomePage() {
-  const [transcript, setTranscript] = useState('');
-  const [callType, setCallType] = useState<'kickoff' | 'coaching'>('kickoff');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loadingSample, setLoadingSample] = useState<string | null>(null);
   const router = useRouter();
-
-  const wordCount = transcript.trim() ? transcript.trim().split(/\s+/).length : 0;
-  const charCount = transcript.length;
+  const [callType, setCallType] = useState<"kickoff" | "coaching">("kickoff");
+  const [transcript, setTranscript] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingSample, setLoadingSample] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!transcript.trim()) return;
 
-    setIsSubmitting(true);
-    setError(null);
-
+    setLoading(true);
     try {
       const res = await fetch('/api/evaluations', {
         method: 'POST',
@@ -42,9 +37,9 @@ export default function HomePage() {
 
       const { id } = await res.json();
       router.push(`/evaluations/${id}`);
-    } catch (err) {
-      setError((err as Error).message);
-      setIsSubmitting(false);
+    } catch (err: any) {
+      alert("Error starting evaluation: " + err.message);
+      setLoading(false);
     }
   };
 
@@ -56,127 +51,128 @@ export default function HomePage() {
       setTranscript(text);
       setCallType(sample.type);
     } catch {
-      setError('Failed to load sample transcript');
+      alert('Failed to load sample transcript');
     } finally {
       setLoadingSample(null);
     }
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-blue-50 flex items-center justify-center p-4 sm:p-8">
-      <div className="max-w-3xl w-full">
+    <main className="min-h-screen bg-[#FAF8F5] text-[#1A1A1E] relative overflow-hidden font-sans selection:bg-amber-200">
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-amber-200/40 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-orange-100/50 blur-[140px] pointer-events-none" />
 
-        {/* Logo / Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-blue-500/25">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Call Evaluator</h1>
+      <header className="max-w-5xl mx-auto px-6 py-8 flex items-center justify-between relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[#111113] text-white flex items-center justify-center shadow-lg shadow-black/10">
+            <Zap className="w-5 h-5 text-amber-300" />
           </div>
-          <p className="text-slate-500 text-sm max-w-md mx-auto">
-            Paste a coaching transcript below. Our AI scores it against the full 12-dimension rubric with verbatim evidence.
+          <div>
+            <h1 className="font-extrabold text-lg tracking-tight">BeaverMind</h1>
+            <p className="text-xs text-[#71717A] font-medium tracking-wide">QC EVALUATION ENGINE</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 border border-black/[0.04] shadow-xs backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-xs font-semibold text-neutral-700">12-Dimension Model Active</span>
+        </div>
+      </header>
+
+      <section className="max-w-3xl mx-auto px-6 pt-6 pb-20 relative z-10">
+        <div className="text-center mb-10">
+          <h2 className="text-4xl md:text-5xl font-black tracking-tight text-[#111113] mb-4">
+            Coaching Call Quality Control
+          </h2>
+          <p className="text-[#6E6D7A] text-base md:text-lg max-w-xl mx-auto leading-relaxed">
+            Deterministic transcript grading against executive rubrics. Verbatim citations, churn risk detection, and automatic caps.
           </p>
         </div>
 
-        {/* Main Card */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
-          <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white/80 backdrop-blur-2xl border border-black/[0.06] rounded-[2.5rem] p-8 md:p-10 shadow-[0_24px_50px_-15px_rgba(0,0,0,0.06)] ring-1 ring-white"
+        >
+          <div className="mb-8">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#71717A] mb-3">
+              1. Select Call Architecture
+            </label>
+            <div className="grid grid-cols-2 gap-4 p-1.5 bg-[#F4F1EA] rounded-2xl border border-black/[0.03]">
+              <button
+                type="button"
+                onClick={() => setCallType("kickoff")}
+                className={`py-3.5 px-5 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                  callType === "kickoff"
+                    ? "bg-white text-[#111113] shadow-[0_4px_12px_rgba(0,0,0,0.06)] scale-[1.01]"
+                    : "text-[#71717A] hover:text-[#111113]"
+                }`}
+              >
+                <span>🚀</span> Kick-off Call
+              </button>
+              <button
+                type="button"
+                onClick={() => setCallType("coaching")}
+                className={`py-3.5 px-5 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                  callType === "coaching"
+                    ? "bg-white text-[#111113] shadow-[0_4px_12px_rgba(0,0,0,0.06)] scale-[1.01]"
+                    : "text-[#71717A] hover:text-[#111113]"
+                }`}
+              >
+                <span>🎯</span> Regular Coaching Call
+              </button>
+            </div>
+          </div>
 
-            {/* Call Type Toggle */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Call Type</label>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setCallType('kickoff')}
-                  className={`flex-1 py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all duration-200 ${
-                    callType === 'kickoff'
-                      ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm shadow-blue-500/10'
-                      : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:border-slate-300'
-                  }`}
-                >
-                  🚀 Kick-off Call
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCallType('coaching')}
-                  className={`flex-1 py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all duration-200 ${
-                    callType === 'coaching'
-                      ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm shadow-blue-500/10'
-                      : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:border-slate-300'
-                  }`}
-                >
-                  🎯 Coaching Call
-                </button>
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#71717A]">
+                2. Paste Verbatim Transcript
+              </label>
+              <div className="flex gap-2">
+                {SAMPLE_TRANSCRIPTS.map((sample) => (
+                  <button
+                    key={sample.label}
+                    type="button"
+                    onClick={() => loadSample(sample)}
+                    disabled={!!loadingSample}
+                    className="px-2.5 py-1 text-[10px] font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors disabled:opacity-50 uppercase tracking-wider"
+                  >
+                    {loadingSample === sample.label ? '...' : sample.label}
+                  </button>
+                ))}
               </div>
             </div>
-
-            {/* Transcript Textarea */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Transcript</label>
-                <span className="text-xs text-slate-400">
-                  {wordCount.toLocaleString()} words · {charCount.toLocaleString()} chars
-                </span>
-              </div>
-              <textarea
-                value={transcript}
-                onChange={(e) => setTranscript(e.target.value)}
-                placeholder="[Speaker Name]: what they said..."
-                className="w-full h-64 p-4 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-400 resize-none font-mono text-sm text-slate-800 placeholder:text-slate-300 transition-all bg-slate-50/50"
-                required
-              />
+            <textarea
+              rows={8}
+              required
+              placeholder="Paste raw conversation transcript here..."
+              value={transcript}
+              onChange={(e) => setTranscript(e.target.value)}
+              className="w-full bg-[#FAF8F5] border border-black/[0.08] focus:border-[#111113] focus:bg-white rounded-2xl p-5 text-sm font-mono leading-relaxed transition-all outline-none resize-y"
+            />
+            <div className="mt-2 text-right">
+              <span className="text-xs font-medium text-[#A1A1AA]">{transcript.length} characters</span>
             </div>
+          </div>
 
-            {/* Quick Load Samples */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-1">Quick load:</span>
-              {SAMPLE_TRANSCRIPTS.map((sample) => (
-                <button
-                  key={sample.label}
-                  type="button"
-                  onClick={() => loadSample(sample)}
-                  disabled={!!loadingSample}
-                  className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {loadingSample === sample.label ? '...' : sample.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Error Display */}
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-medium">
-                ⚠️ {error}
-              </div>
+          <button
+            type="submit"
+            disabled={loading || !transcript.trim()}
+            className="w-full bg-[#111113] hover:bg-[#27272A] text-white font-bold text-sm tracking-wide py-4 rounded-2xl shadow-[0_12px_24px_-8px_rgba(0,0,0,0.3)] transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Ingesting Transcript...
+              </span>
+            ) : (
+              <>
+                <span>Run Executive Evaluation</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
             )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting || !transcript.trim()}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 flex items-center justify-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Starting Evaluation...
-                </>
-              ) : (
-                <>Generate Report</>
-              )}
-            </button>
-          </form>
-        </div>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-slate-400 mt-6">
-          Evaluations run in the background — you can safely close this tab and return later.
-        </p>
-      </div>
+          </button>
+        </form>
+      </section>
     </main>
   );
 }
